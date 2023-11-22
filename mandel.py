@@ -1,19 +1,18 @@
 import torch
 import math
 
-def mandel(device = torch.device('cpu'), a=(-2,-1.5), b=(1,1.5), pixels=1e6, iterations=5000):
+def mandel(device = torch.device('cpu'), limits=(-2,0.75,-1.4,1.4), a=(-2,-1.4), b=(0.75,1.4), pixels=1e7, iterations=500):
 	'''
 	device:         torch.device, 											default: cpu
-	a:              tuple, (x,y), bottom left corner of viewing window		default: (-2,-1.5)
-	b:              tuple, (x,y), upper left corner of viewing window		default: (1,1.5)
-	pixels:         int, number of pixels in output, 						default: 1,000,000
+	limits:			tuple, position of output (xmin,xmax,ymin,ymax)			default: (-2,0.75,-1.4,1.4)
+	pixels:         int, number of pixels in output, 						default: 10,000,000
 	iterations:		int,													default: 5000
 	'''
 
-	xs = torch.linspace(a[0],b[0], int(math.sqrt(pixels)), device=dev)
-	ys = torch.linspace(a[1],b[1], int(math.sqrt(pixels)), device=dev)
+	xs = torch.linspace( limits[0],limits[1], int(math.sqrt(pixels)), device=device)
+	ys = torch.linspace( limits[3],limits[2], int(math.sqrt(pixels)), device=device)
 
-	z = torch.complex( torch.meshgrid((xs,ys), indexing='xy') )
+	z = torch.complex( *torch.meshgrid((xs,ys), indexing='xy') )
 	out = torch.zeros_like(z, dtype=int)
 	c = z.clone()
 	
@@ -22,7 +21,7 @@ def mandel(device = torch.device('cpu'), a=(-2,-1.5), b=(1,1.5), pixels=1e6, ite
 		mask = torch.abs(z) > 4
 		out[mask], z[mask], c[mask] = i, 0, 0
 
-	return out
+	return out.to('cpu')
 
 
 if __name__ == '__main__':
@@ -31,14 +30,11 @@ if __name__ == '__main__':
 	import matplotlib.pyplot as plt
 
 	parser = argparse.ArgumentParser()
-	parser.add_argument('--a', default=(-2,-1.5), help='bottom left corner of viewing window')
-	parser.add_argument('--b', default=(1,1.5), help='upper right corner of viewing window')
-	parser.add_argument('--pixels', default=1e6, help='number of pixels in output')
 	parser.add_argument('--iterations', default=5000, help='number of iterations')
 	args = parser.parse_args()
 
-	out = mandel(a=args.a, b=args.b, pixels=args.pixels, iterations=args.iterations)
-
+	out = mandel(iterations=int(args.iterations))
 	cols = colormaps.get_cmap('twilight_shifted')
 	cols.set_under(color='black')
-	plt.imshow(out, cmap=cols, vmin=0.5)	
+	plt.imshow(out, cmap=cols, vmin=1, extent=(-2,0.75,-1.4,1.4))
+	plt.show(block=True)
